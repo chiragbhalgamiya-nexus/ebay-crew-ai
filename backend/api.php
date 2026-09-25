@@ -2,125 +2,137 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
-class EBayListingController extends Controller
+class EbayAPIController extends Controller
 {
     /**
-     * Get all listings with pagination and filtering
-     * 
-     * @param Request $request
-     * @return JsonResponse
+     * Endpoint: GET /api/listings
+     * Returns paginated product listings with cost breakdown
      */
     public function getListings(Request $request): JsonResponse
     {
         $page = $request->query('page', 1);
-        $limit = min($request->query('limit', 20), 100);
-        $sellerConfidence = $request->query('seller_confidence');
-        $priceMin = $request->query('price_min');
-        $priceMax = $request->query('price_max');
+        $limit = $request->query('limit', 20);
+        $offset = ($page - 1) * $limit;
 
         $listings = [
             [
                 'id' => 1,
-                'title' => 'Vintage iPhone 12 - Excellent Condition',
-                'price' => 599.99,
-                'seller_confidence' => 'Gold',
-                'condition' => 'Like New',
-                'image_urls' => ['https://cdn.example.com/listing1.jpg'],
-                'active' => true
+                'title' => 'Premium Vintage Camera',
+                'seller_id' => 101,
+                'seller_name' => 'TechCollector',
+                'base_price' => 299.99,
+                'shipping_cost' => 15.50,
+                'tax_amount' => 24.00,
+                'platform_fee' => 18.99,
+                'total_landed_cost' => 358.48,
+                'trust_score' => 98.5,
+                'recommendation_score' => 0.92
             ],
             [
                 'id' => 2,
-                'title' => 'MacBook Pro 16" 2023 M2',
-                'price' => 1299.99,
-                'seller_confidence' => 'Platinum',
-                'condition' => 'New',
-                'image_urls' => ['https://cdn.example.com/listing2.jpg'],
-                'active' => true
+                'title' => 'Wireless Bluetooth Headphones',
+                'seller_id' => 102,
+                'seller_name' => 'ElectronicsHub',
+                'base_price' => 89.99,
+                'shipping_cost' => 8.00,
+                'tax_amount' => 7.20,
+                'platform_fee' => 5.99,
+                'total_landed_cost' => 111.18,
+                'trust_score' => 95.2,
+                'recommendation_score' => 0.85
             ]
         ];
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'data' => $listings,
             'pagination' => [
                 'page' => $page,
                 'limit' => $limit,
-                'total' => count($listings)
+                'total' => 150
             ]
         ], 200);
     }
 
     /**
-     * Get product details by listing ID
-     * 
-     * @param int $listingId
-     * @return JsonResponse
+     * Endpoint: GET /api/listings/{id}
+     * Returns detailed product information with full cost breakdown
      */
-    public function getProductDetails(int $listingId): JsonResponse
+    public function getProductDetails($id): JsonResponse
     {
         $product = [
-            'id' => $listingId,
-            'title' => 'Premium Vintage Watch',
-            'description' => 'Authentic Swiss-made watch from 1980s',
-            'price' => 450.00,
-            'seller_id' => 12345,
-            'seller_confidence_score' => 4.8,
-            'seller_confidence_tier' => 'Gold',
-            'condition' => 'Used - Excellent',
-            'category' => 'Watches & Jewelry',
-            'image_urls' => [
-                'https://cdn.example.com/watch1.jpg',
-                'https://cdn.example.com/watch2.jpg'
+            'id' => $id,
+            'title' => 'Premium Vintage Camera',
+            'description' => 'Excellent condition professional camera',
+            'seller_id' => 101,
+            'seller_name' => 'TechCollector',
+            'seller_trust_badge' => 'VERIFIED',
+            'base_price' => 299.99,
+            'cost_breakdown' => [
+                'base_price' => 299.99,
+                'shipping_cost' => 15.50,
+                'import_duty' => 0.00,
+                'sales_tax' => 24.00,
+                'platform_fee' => 18.99,
+                'discount' => 0.00,
+                'total_landed_cost' => 358.48
             ],
-            'shipping_speed' => '2-3 days',
-            'return_policy' => '30-day returns accepted',
-            'active' => true,
-            'created_at' => '2026-09-20T10:30:00Z',
-            'seller_response_time_hours' => 2
+            'seller_metrics' => [
+                'trust_score' => 98.5,
+                'positive_rating_pct' => 99.2,
+                'response_time_avg_hours' => 2.5,
+                'verification_level' => 'ADVANCED'
+            ],
+            'images' => ['img1.jpg', 'img2.jpg'],
+            'in_stock' => true,
+            'quantity_available' => 1
         ];
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'data' => $product
         ], 200);
     }
 
     /**
-     * Create a new listing
-     * 
-     * @param Request $request
-     * @return JsonResponse
+     * Endpoint: POST /api/listings
+     * Creates a new product listing (seller endpoint)
      */
     public function createListing(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'title' => 'required|string|max:80',
+            'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'price' => 'required|numeric|min:0.01',
-            'condition' => 'required|string',
-            'category_id' => 'required|integer',
-            'image_urls' => 'array'
+            'base_price' => 'required|numeric|min:0.01',
+            'shipping_method' => 'required|in:standard,express,overnight',
+            'tax_category' => 'required|string',
+            'quantity' => 'required|integer|min:1'
         ]);
 
         $listing = [
-            'id' => rand(10000, 99999),
+            'id' => 999,
+            'seller_id' => auth()->id(),
             'title' => $validated['title'],
             'description' => $validated['description'],
-            'price' => $validated['price'],
-            'condition' => $validated['condition'],
-            'category_id' => $validated['category_id'],
-            'image_urls' => $validated['image_urls'] ?? [],
-            'seller_id' => auth()->id() ?? 1,
-            'status' => 'pending_review',
-            'created_at' => now(),
-            'active' => false
+            'base_price' => $validated['base_price'],
+            'shipping_method' => $validated['shipping_method'],
+            'tax_category' => $validated['tax_category'],
+            'quantity_available' => $validated['quantity'],
+            'status' => 'ACTIVE',
+            'created_at' => now()->toIso8601String(),
+            'recommendation_score' => 0.0,
+            'cost_breakdown' => [
+                'base_price' => $validated['base_price'],
+                'estimated_platform_fee' => $validated['base_price'] * 0.065,
+                'estimated_total' => $validated['base_price'] * 1.065
+            ]
         ];
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Listing created successfully',
             'data' => $listing
         ], 201);
